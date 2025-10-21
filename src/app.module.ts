@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import * as path from 'path';
 
+// ✅ Core Feature Modules
 import { AuthModule } from './auth/auth.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { UserModule } from './user/user.module';
@@ -17,15 +18,19 @@ import { PaymentsModule } from './payments/payments.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { CommunityModule } from './community/community.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { HealthModule } from './health/health.module'; // ✅ Added
+import { HealthModule } from './health/health.module';
+import { MessageModule } from './message/message.module'; // ✅ Added this line
 
+// ✅ Global Guards
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
   imports: [
+    // ✅ Environment Config
     ConfigModule.forRoot({ isGlobal: true }),
 
+    // ✅ Database Configuration
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -58,7 +63,7 @@ import { RolesGuard } from './auth/roles.guard';
           };
         }
 
-        // Default: better-sqlite3 (dev/local fast DB)
+        // ✅ Default: better-sqlite3 (faster local DB)
         return {
           type: 'better-sqlite3' as const,
           database: path.resolve(
@@ -72,7 +77,7 @@ import { RolesGuard } from './auth/roles.guard';
       },
     }),
 
-    // ✅ Feature modules
+    // ✅ App Feature Modules
     AuthModule,
     DashboardModule,
     UserModule,
@@ -85,8 +90,11 @@ import { RolesGuard } from './auth/roles.guard';
     UtilitiesModule,
     CommunityModule,
     NotificationsModule,
-    HealthModule, // ✅ Registered here
+    HealthModule,
+    MessageModule, // ✅ Registered here
   ],
+
+  // ✅ Apply Global Guards
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

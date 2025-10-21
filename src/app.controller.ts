@@ -1,10 +1,9 @@
-// src/app.controller.ts
 import { Controller, Get } from '@nestjs/common';
 
-@Controller()
+@Controller('api')
 export class AppController {
-  @Get()
-  getHello(): string {
-    return 'Ochiga backend running 🚀';
+  @Get('health')
+  getHealth() {
+    return { status: 'ok', message: 'Ochiga backend is alive' };
   }
 }

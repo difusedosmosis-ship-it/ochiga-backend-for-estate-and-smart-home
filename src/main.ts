@@ -9,12 +9,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const logger = new Logger('Bootstrap');
 
-  // ✅ Enable CORS for frontend
+  // ✅ Global API prefix
+  app.setGlobalPrefix('api');
+
+  // ✅ Enable CORS for frontend (GitHub Codespaces + local + production)
   app.enableCors({
     origin: [
-      "https://ideal-space-enigma-q57px96qp7j3x7pr-3000.app.github.dev", // frontend
+      "https://ideal-system-wrjxv66vrwwphgwj6-3000.app.github.dev", // frontend (Codespaces)
+      "http://localhost:3000", // local
+      "*", // allow all origins in AWS for now — adjust later if needed
     ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
 
   // ✅ Global validation rules
@@ -29,7 +35,7 @@ async function bootstrap() {
   // ✅ Global error handler
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // ✅ Swagger config
+  // ✅ Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Ochiga Smart Home & Estate API')
     .setDescription('API documentation for Ochiga backend services')
@@ -52,11 +58,14 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  // ✅ Works locally & in Codespaces
-  const port = process.env.PORT || 4000;
+  // ✅ Use AWS Elastic Beanstalk’s default port (8080)
+  const port = process.env.PORT || 8080;
   await app.listen(port, '0.0.0.0');
 
-  logger.log(`🚀 Ochiga Backend running on: ${await app.getUrl()}`);
-  logger.log(`📖 Swagger Docs available at: ${await app.getUrl()}/api`);
+  const url = await app.getUrl();
+  logger.log(`🚀 Ochiga Backend running on: ${url}`);
+  logger.log(`📖 Swagger Docs available at: ${url}/api`);
+  logger.log(`✅ Health Check available at: ${url}/api/health`);
 }
+
 bootstrap();
