@@ -1,5 +1,7 @@
 // src/iot/iot.mqtt.ts
 import { Injectable, Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import { connect, MqttClient } from 'mqtt';
 
 @Injectable()
@@ -8,14 +10,27 @@ export class IotMqttService {
   private readonly logger = new Logger(IotMqttService.name);
 
   constructor() {
-    this.client = connect(process.env.MQTT_BROKER_URL || 'mqtt://broker.hivemq.com:1883');
+    const endpoint = process.env.AWS_IOT_ENDPOINT;
+    const certDir = path.resolve(process.cwd(), 'certs'); // <-- root-level certs folder
+
+    const options = {
+      host: endpoint,
+      port: 8883,
+      protocol: 'mqtts',
+      key: fs.readFileSync(path.join(certDir, 'private.pem.key')),
+      cert: fs.readFileSync(path.join(certDir, 'certificate.pem.crt')),
+      ca: fs.readFileSync(path.join(certDir, 'AmazonRootCA1.pem')),
+      rejectUnauthorized: true,
+    };
+
+    this.client = connect(options);
 
     this.client.on('connect', () => {
-      this.logger.log('✅ Connected to MQTT broker');
+      this.logger.log('✅ Connected securely to AWS IoT Core');
     });
 
     this.client.on('error', (err) => {
-      this.logger.error('❌ MQTT error: ' + err.message);
+      this.logger.error('❌ AWS IoT MQTT error: ' + err.message);
     });
   }
 
