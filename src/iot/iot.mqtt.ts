@@ -1,4 +1,3 @@
-// src/iot/iot.mqtt.ts
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -11,19 +10,18 @@ export class IotMqttService {
 
   constructor() {
     const endpoint = process.env.AWS_IOT_ENDPOINT;
-    const certDir = path.resolve(process.cwd(), 'certs'); // <-- root-level certs folder
+    const certDir = path.resolve(process.cwd(), 'certs');
+
+    const url = `mqtts://${endpoint}:8883`; // 👈 clean approach
 
     const options = {
-      host: endpoint,
-      port: 8883,
-      protocol: 'mqtts',
       key: fs.readFileSync(path.join(certDir, 'private.pem.key')),
       cert: fs.readFileSync(path.join(certDir, 'certificate.pem.crt')),
       ca: fs.readFileSync(path.join(certDir, 'AmazonRootCA1.pem')),
       rejectUnauthorized: true,
     };
 
-    this.client = connect(options);
+    this.client = connect(url, options);
 
     this.client.on('connect', () => {
       this.logger.log('✅ Connected securely to AWS IoT Core');
@@ -34,7 +32,6 @@ export class IotMqttService {
     });
   }
 
-  /** Generic publisher */
   publish(topic: string, message: any) {
     if (!this.client.connected) {
       this.logger.warn(`⚠️ MQTT not connected, skipping publish to ${topic}`);
@@ -43,16 +40,11 @@ export class IotMqttService {
     this.client.publish(topic, JSON.stringify(message));
   }
 
-  /** Specialized publisher for toggling devices */
   publishToggle(deviceId: string, isOn: boolean) {
-    const topic = `devices/${deviceId}/toggle`;
-    const message = { isOn };
-    this.publish(topic, message);
+    this.publish(`devices/${deviceId}/toggle`, { isOn });
   }
 
-  /** Example: publish metadata updates */
   publishMetadata(deviceId: string, metadata: Record<string, any>) {
-    const topic = `devices/${deviceId}/metadata`;
-    this.publish(topic, metadata);
+    this.publish(`devices/${deviceId}/metadata`, metadata);
   }
 }
