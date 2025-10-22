@@ -13,7 +13,10 @@
     "emitDecoratorMetadata": true,
 
     // ✅ For Jest tests
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+
+    // ✅ Allow custom type declarations like aws-iot-device-sdk
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "exclude": ["node_modules", "dist"]
 }
