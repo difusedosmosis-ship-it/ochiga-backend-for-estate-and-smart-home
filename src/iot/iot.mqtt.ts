@@ -5,7 +5,7 @@ import { connect, MqttClient } from 'mqtt';
 
 @Injectable()
 export class IotMqttService {
-  private client: MqttClient;
+  private client!: MqttClient;
   private readonly logger = new Logger(IotMqttService.name);
 
   constructor() {
@@ -15,11 +15,14 @@ export class IotMqttService {
         throw new Error('AWS_IOT_ENDPOINT environment variable is missing!');
       }
 
-      // For Docker + local compatibility
+      // Works for both Docker and local environments
       const certDir = path.join(__dirname, '..', '..', 'certs');
 
       console.log('🔍 Cert directory:', certDir);
-      console.log('🔍 Files found:', fs.existsSync(certDir) ? fs.readdirSync(certDir) : '❌ No certs folder');
+      console.log(
+        '🔍 Files found:',
+        fs.existsSync(certDir) ? fs.readdirSync(certDir) : '❌ No certs folder found',
+      );
 
       const url = `mqtts://${endpoint}:8883`;
 
@@ -27,9 +30,9 @@ export class IotMqttService {
       const certPath = path.join(certDir, 'certificate.pem.crt');
       const caPath = path.join(certDir, 'AmazonRootCA1.pem');
 
-      // Verify existence before reading
+      // Ensure certificate files exist
       [keyPath, certPath, caPath].forEach((p) => {
-        if (!fs.existsSync(p)) throw new Error(`Missing file: ${p}`);
+        if (!fs.existsSync(p)) throw new Error(`Missing certificate file: ${p}`);
       });
 
       const options = {
@@ -45,11 +48,11 @@ export class IotMqttService {
         this.logger.log('✅ Connected securely to AWS IoT Core');
       });
 
-      this.client.on('error', (err) => {
-        this.logger.error('❌ AWS IoT MQTT error: ' + err.message);
+      this.client.on('error', (err: any) => {
+        this.logger.error('❌ AWS IoT MQTT error: ' + (err?.message || err));
       });
-    } catch (err) {
-      this.logger.error('🚨 MQTT init failed: ' + err.message);
+    } catch (err: any) {
+      this.logger.error('🚨 MQTT init failed: ' + (err?.message || err));
     }
   }
 
