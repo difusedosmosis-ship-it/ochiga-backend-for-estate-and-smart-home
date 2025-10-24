@@ -9,31 +9,52 @@ export class IotMqttService {
   private readonly logger = new Logger(IotMqttService.name);
 
   constructor() {
-    const endpoint = process.env.AWS_IOT_ENDPOINT;
-    const certDir = path.resolve(process.cwd(), 'certs');
+    try {
+      const endpoint = process.env.AWS_IOT_ENDPOINT;
+      if (!endpoint) {
+        throw new Error('AWS_IOT_ENDPOINT environment variable is missing!');
+      }
 
-    const url = `mqtts://${endpoint}:8883`; // 👈 clean approach
+      // For Docker + local compatibility
+      const certDir = path.join(__dirname, '..', '..', 'certs');
 
-    const options = {
-      key: fs.readFileSync(path.join(certDir, 'private.pem.key')),
-      cert: fs.readFileSync(path.join(certDir, 'certificate.pem.crt')),
-      ca: fs.readFileSync(path.join(certDir, 'AmazonRootCA1.pem')),
-      rejectUnauthorized: true,
-    };
+      console.log('🔍 Cert directory:', certDir);
+      console.log('🔍 Files found:', fs.existsSync(certDir) ? fs.readdirSync(certDir) : '❌ No certs folder');
 
-    this.client = connect(url, options);
+      const url = `mqtts://${endpoint}:8883`;
 
-    this.client.on('connect', () => {
-      this.logger.log('✅ Connected securely to AWS IoT Core');
-    });
+      const keyPath = path.join(certDir, 'private.pem.key');
+      const certPath = path.join(certDir, 'certificate.pem.crt');
+      const caPath = path.join(certDir, 'AmazonRootCA1.pem');
 
-    this.client.on('error', (err) => {
-      this.logger.error('❌ AWS IoT MQTT error: ' + err.message);
-    });
+      // Verify existence before reading
+      [keyPath, certPath, caPath].forEach((p) => {
+        if (!fs.existsSync(p)) throw new Error(`Missing file: ${p}`);
+      });
+
+      const options = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+        ca: fs.readFileSync(caPath),
+        rejectUnauthorized: true,
+      };
+
+      this.client = connect(url, options);
+
+      this.client.on('connect', () => {
+        this.logger.log('✅ Connected securely to AWS IoT Core');
+      });
+
+      this.client.on('error', (err) => {
+        this.logger.error('❌ AWS IoT MQTT error: ' + err.message);
+      });
+    } catch (err) {
+      this.logger.error('🚨 MQTT init failed: ' + err.message);
+    }
   }
 
   publish(topic: string, message: any) {
-    if (!this.client.connected) {
+    if (!this.client || !this.client.connected) {
       this.logger.warn(`⚠️ MQTT not connected, skipping publish to ${topic}`);
       return;
     }
